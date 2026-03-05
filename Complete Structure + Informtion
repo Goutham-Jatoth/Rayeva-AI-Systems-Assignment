@@ -1,0 +1,198 @@
+GitHub Repository Structure
+rayeva-ai-systems/
+│
+├── README.md
+├── requirements.txt
+├── .env.example
+├── .gitignore
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── config/
+│   │   ├── settings.py
+│   │
+│   ├── api/
+│   │   ├── routes.py
+│   │
+│   ├── ai/
+│   │   ├── ai_service.py
+│   │   ├── prompts.py
+│   │
+│   ├── modules/
+│   │   ├── module1_category/
+│   │   │   ├── service.py
+│   │   │   ├── validator.py
+│   │   │
+│   │   ├── module2_b2b/
+│   │   │   ├── service.py
+│   │   │   ├── validator.py
+│   │   │
+│   │   ├── module3_impact/
+│   │   │   ├── estimator.py
+│   │   │
+│   │   ├── module4_whatsapp/
+│   │       ├── webhook.py
+│   │       ├── router.py
+│   │
+│   ├── database/
+│   │   ├── models.py
+│   │   ├── db.py
+│   │
+│   ├── logs/
+│       ├── ai_logger.py
+│
+└── tests/
+    ├── test_module1.py
+    ├── test_module2.py
+🔹 Core Files
+📄 README.md
+# Rayeva – AI Systems Assignment
+
+Role: Full Stack / AI Intern  
+Focus: Applied AI for Sustainable Commerce  
+
+## Implemented Modules
+- Module 1: AI Auto-Category & Tag Generator
+- Module 2: AI B2B Proposal Generator
+
+## Architected Modules
+- Module 3: AI Impact Reporting Generator
+- Module 4: AI WhatsApp Support Bot
+
+## Tech Stack
+- FastAPI
+- OpenAI API
+- PostgreSQL
+- Python 3.11
+
+## Run Locally
+
+1. Clone repo
+2. Create virtual environment
+3. Install requirements:
+   pip install -r requirements.txt
+4. Add .env file
+5. Run:
+   uvicorn app.main:app --reload
+📄 requirements.txt
+fastapi
+uvicorn
+openai
+python-dotenv
+psycopg2-binary
+pydantic
+📄 .env.example
+OPENAI_API_KEY=your_key_here
+DATABASE_URL=postgresql://user:password@localhost:5432/rayeva
+WHATSAPP_TOKEN=your_token_here
+🧠 AI Layer
+📁 app/ai/prompts.py
+CATEGORY_PROMPT = """
+You are a sustainability-focused e-commerce classifier.
+Return structured JSON only.
+"""
+
+B2B_PROMPT = """
+You are a sustainable B2B commerce advisor.
+Return structured JSON only.
+"""
+📁 app/ai/ai_service.py
+import os
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def generate_ai_response(prompt: str):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2
+    )
+    return response.choices[0].message.content
+📦 Module 1 Implementation
+📁 module1_category/service.py
+from app.ai.ai_service import generate_ai_response
+from app.ai.prompts import CATEGORY_PROMPT
+from .validator import validate_output
+
+def process_product(data):
+    prompt = CATEGORY_PROMPT.format(**data)
+    ai_output = generate_ai_response(prompt)
+    validated = validate_output(ai_output)
+    return validated
+📁 module1_category/validator.py
+import json
+
+ALLOWED_FILTERS = [
+    "plastic-free", "compostable",
+    "vegan", "recycled",
+    "biodegradable", "organic", "low-carbon"
+]
+
+def validate_output(ai_output):
+    data = json.loads(ai_output)
+    data["sustainability_filters"] = [
+        f for f in data["sustainability_filters"]
+        if f in ALLOWED_FILTERS
+    ]
+    return data
+📦 Module 2 Implementation
+📁 module2_b2b/service.py
+from app.ai.ai_service import generate_ai_response
+from app.ai.prompts import B2B_PROMPT
+from .validator import validate_budget
+
+def generate_proposal(data):
+    prompt = B2B_PROMPT.format(**data)
+    ai_output = generate_ai_response(prompt)
+    validated = validate_budget(ai_output, data["budget"])
+    return validated
+📁 module2_b2b/validator.py
+import json
+
+def validate_budget(ai_output, budget):
+    data = json.loads(ai_output)
+    if data["total_estimated_cost"] > budget:
+        raise ValueError("Budget exceeded")
+    return data
+🗄 Database Layer
+📁 database/models.py
+from pydantic import BaseModel
+from typing import List
+
+class ProductResponse(BaseModel):
+    primary_category: str
+    sub_category: str
+    seo_tags: List[str]
+    sustainability_filters: List[str]
+🌐 API Layer
+📁 app/main.py
+from fastapi import FastAPI
+from app.api.routes import router
+
+app = FastAPI(title="Rayeva AI Systems")
+app.include_router(router)
+📁 app/api/routes.py
+from fastapi import APIRouter
+from app.modules.module1_category.service import process_product
+from app.modules.module2_b2b.service import generate_proposal
+
+router = APIRouter()
+
+@router.post("/module1/category")
+def category_endpoint(data: dict):
+    return process_product(data)
+
+@router.post("/module2/b2b")
+def b2b_endpoint(data: dict):
+    return generate_proposal(data)
+🧾 Logging Layer
+📁 logs/ai_logger.py
+def log_ai(module, prompt, response):
+    print(f"[{module}] PROMPT:", prompt)
+    print(f"[{module}] RESPONSE:", response)
+🧪 Tests
+📁 tests/test_module1.py
+def test_sample():
+    assert True
