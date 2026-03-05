@@ -1,0 +1,324 @@
+IMPLEMENTED MODULE 1
+
+AI Auto-Category & Tag Generator
+Purpose
+
+Automate catalog enrichment to:
+
+Reduce manual tagging
+
+Improve SEO
+
+Improve sustainability filtering
+
+Standardize product structure
+
+Architecture
+Client (Admin Panel)
+        ↓
+REST API (FastAPI / Express)
+        ↓
+AI Service Layer (OpenAI Wrapper)
+        ↓
+Business Logic Layer
+        ↓
+Database (PostgreSQL / MongoDB)
+        ↓
+Prompt & Response Logger
+
+Separation:
+
+AI Layer → Only generates structured output
+
+Business Layer → Validates, enforces rules
+
+DB Layer → Stores structured JSON
+
+Predefined Categories (Business Grounded)
+PRIMARY_CATEGORIES = [
+    "Packaging",
+    "Home & Kitchen",
+    "Personal Care",
+    "Office Supplies",
+    "Food & Beverage",
+    "Lifestyle"
+]
+AI Prompt Design
+CATEGORY_PROMPT = """
+You are a sustainability-focused e-commerce classifier.
+
+Given product details:
+Name: {name}
+Description: {description}
+Materials: {materials}
+
+Return ONLY structured JSON in this format:
+
+{
+  "primary_category": "",
+  "sub_category": "",
+  "seo_tags": [],
+  "sustainability_filters": []
+}
+
+Rules:
+- Choose primary_category only from provided list.
+- Generate 5-10 SEO tags.
+- Sustainability filters must be from:
+["plastic-free", "compostable", "vegan", "recycled", "biodegradable", "organic", "low-carbon"]
+- No explanations. JSON only.
+"""
+AI Service Layer (Clean Separation)
+# ai_service.py
+import openai
+import os
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def generate_category(data):
+    prompt = CATEGORY_PROMPT.format(**data)
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2
+    )
+    
+    return response.choices[0].message["content"]
+Business Logic Layer
+# business_logic.py
+import json
+
+ALLOWED_FILTERS = [
+    "plastic-free", "compostable", "vegan",
+    "recycled", "biodegradable", "organic", "low-carbon"
+]
+
+def validate_and_structure(ai_output):
+    try:
+        data = json.loads(ai_output)
+
+        # Validate filters
+        data["sustainability_filters"] = [
+            f for f in data["sustainability_filters"]
+            if f in ALLOWED_FILTERS
+        ]
+
+        return data
+
+    except Exception:
+        raise ValueError("Invalid AI Output Format")
+🗄 Database Model (Example – PostgreSQL)
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    description TEXT,
+    primary_category TEXT,
+    sub_category TEXT,
+    seo_tags JSONB,
+    sustainability_filters JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE ai_logs (
+    id SERIAL PRIMARY KEY,
+    module TEXT,
+    prompt TEXT,
+    response TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+Example Structured Output
+{
+  "primary_category": "Packaging",
+  "sub_category": "Compostable Mailers",
+  "seo_tags": [
+    "eco-friendly packaging",
+    "compostable mailer bags",
+    "plastic-free shipping",
+    "biodegradable courier bags",
+    "sustainable packaging solution"
+  ],
+  "sustainability_filters": [
+    "plastic-free",
+    "compostable",
+    "biodegradable"
+  ]
+}
+IMPLEMENTED MODULE 2
+AI B2B Proposal Generator
+
+
+Purpose
+
+Generate intelligent bulk procurement proposals for businesses.
+
+Input:
+
+Budget
+
+Client industry
+
+Sustainability priority
+
+Required categories
+
+Prompt
+B2B_PROMPT = """
+You are a sustainable B2B commerce advisor.
+
+Client Industry: {industry}
+Budget: {budget}
+Required Categories: {categories}
+Priority: {priority}
+
+Return ONLY structured JSON:
+
+{
+  "recommended_products": [
+    {
+      "name": "",
+      "category": "",
+      "quantity": 0,
+      "unit_cost": 0,
+      "total_cost": 0
+    }
+  ],
+  "budget_allocation": {},
+  "total_estimated_cost": 0,
+  "impact_summary": ""
+}
+
+Rules:
+- Stay within budget.
+- Align with sustainability priority.
+- Ensure total cost calculation matches.
+"""
+Business Cost Validation
+def validate_budget(proposal_json, budget):
+    total = proposal_json["total_estimated_cost"]
+    if total > budget:
+        raise ValueError("Proposal exceeds budget")
+    return True
+Example Structured Output
+{
+  "recommended_products": [
+    {
+      "name": "Compostable Cutlery Set",
+      "category": "Food & Beverage",
+      "quantity": 2000,
+      "unit_cost": 2,
+      "total_cost": 4000
+    },
+    {
+      "name": "Recycled Paper Cups",
+      "category": "Food & Beverage",
+      "quantity": 3000,
+      "unit_cost": 1,
+      "total_cost": 3000
+    }
+  ],
+  "budget_allocation": {
+    "Food & Beverage": 7000
+  },
+  "total_estimated_cost": 7000,
+  "impact_summary": "This proposal eliminates approximately 5000 plastic units and positions the brand as environmentally responsible."
+}
+ARCHITECTURE OUTLINE – MODULE 3
+AI Impact Reporting Generator
+
+Logic-Based Estimation Engine
+
+Instead of pure AI hallucination:
+
+Step 1 – Use Business Rules
+PLASTIC_SAVED_PER_UNIT = {
+    "Compostable Cutlery Set": 5,  # grams
+    "Paper Mailer": 10
+}
+Step 2 – Carbon Estimation
+carbon_avoided = units * material_emission_factor
+Step 3 – AI for Narrative Only
+
+AI generates human-readable explanation using:
+
+plastic_saved
+
+carbon_avoided
+
+sourcing_info
+
+Structured Output:
+
+{
+  "plastic_saved_kg": 12.5,
+  "carbon_avoided_kg": 48.2,
+  "local_sourcing_summary": "",
+  "impact_statement": ""
+}
+
+Stored with order record.
+
+ARCHITECTURE OUTLINE – MODULE 4
+AI WhatsApp Support Bot
+Architecture
+WhatsApp API (Meta Cloud API)
+        ↓
+Webhook Endpoint
+        ↓
+Intent Classifier (AI)
+        ↓
+Business Logic Router
+        ↓
+Database
+        ↓
+Response Generator
+        ↓
+Conversation Logger
+💬 Supported Flows
+ Order Status
+User: "Where is my order #1234?"
+
+→ Query DB
+→ Return real tracking status
+ Return Policy
+
+Predefined FAQ retrieval system (No hallucination)
+
+ Escalation Logic
+
+If message contains:
+
+"refund"
+
+"legal"
+
+"complaint"
+
+"not delivered"
+
+→ Auto-escalate to human
+→ Log priority flag
+
+ Environment-Based API Management
+.env
+OPENAI_API_KEY=xxxxxxxx
+DB_URL=postgres://
+WHATSAPP_TOKEN=xxxx
+
+Never hardcoded.
+
+ Logging System
+def log_ai(module, prompt, response):
+    db.insert({
+        "module": module,
+        "prompt": prompt,
+        "response": response
+    })
+
+Used for:
+
+Debugging
+
+Compliance
+
+AI auditing
